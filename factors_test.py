@@ -11,6 +11,7 @@ import pickle
 import numpy as np
 import csv
 import datetime
+import random
 
 
 # 格式化输出模型因子测试的结果
@@ -36,8 +37,9 @@ print fs.score, fs.std
 
 factors = data[1]
 # 在因子中加入扰动变量，便于比较模型的抗干扰性
-factors = np.hstack((factors, np.transpose([range(0, factors.shape[0])])))
-
+turbe = np.transpose([range(0, factors.shape[0])])
+random.shuffle(turbe)
+factors = np.hstack((factors, turbe))
 # 调整因子有效性的接受值
 fs.change_ratio(accept_ratio=0.1)
 
@@ -55,9 +57,9 @@ writer.writerow([model_info])
 #factor_source = "一致预期数据表con_forecast_idx".decode('utf8').encode('gbk')
 factor_source = "一致预期衍生指标计算con_forecast_c2_idx".decode('utf8').encode('gbk')
 #factor_source = "一致预期滚动衍生数据表con_forecast_c3_idx".decode('utf8').encode('gbk')
-#factor_name = ['c1', 'c3', 'c4', 'c5', 'c6', 'c7', 'c12', 'cb', 'cpb']
-factor_name = ['滚动净利润_c13', '滚动PE_c9']
-# factor_name = ['cgb', 'cgpb', 'cgg', 'cgpeg']
+#factor_name = ['c1', 'c3', 'c4', 'c5', 'c6', 'c7', 'c12', 'cb', 'cpb', '干扰数据']
+factor_name = ['滚动净利润_c13', '滚动PE_c9', '干扰数据']
+# factor_name = ['cgb', 'cgpb', 'cgg', 'cgpeg', '干扰数据']
 
 for i in range(0, len(factor_name)):
     factor_name[i] = factor_name[i].decode('utf8').encode('gbk')

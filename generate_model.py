@@ -12,7 +12,6 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.tree import DecisionTreeClassifier
 from Preprocessing import ProcessingMethod
 import pickle
-import matplotlib.pyplot as plt
 import random
 from sklearn.model_selection import train_test_split
 
@@ -66,7 +65,4 @@ output.close()
 
 # 保存X_chosen与y_chosen到csv文件（已经是最终形式）
 fs.save()
-
-# 输出模型预测结果
-x_train, x_test, y_train, y_test = train_test_split(fs.X_chosen, fs.y_chosen, test_size=0.2, random_state=random.seed())
 
