@@ -3,6 +3,8 @@ from Preprocessing import ProcessingMethod
 from sklearn.model_selection import train_test_split
 import numpy as np
 import csv
+import random
+import pickle
 
 
 class FactorFilter:
@@ -57,23 +59,36 @@ class FactorFilter:
         return self.final_model
 
     # 对因子列表进行自动筛选，获得效果最好的因子组合
-    def filter_factors(self):
-        print "开始寻找最优因子组合，当前输入集大小为", self.__X.shape
+    def filter_factors(self, start_index=None):
+        print "开始寻找最优因子组合，当前输入集大小为".decode('utf8').encode('gbk'), self.__X.shape
         # 随机选择起始因子，并在原始数据中剔除该因子，初始化X_chosen与y_chosen矩阵
-        start_factor_index = np.random.randint(0, self.__X.shape[1])
+        #start_factor_index = np.random.randint(0, self.__X.shape[1])
+        # 将起始因子选择为涨跌幅
+        if start_index is not None:
+            start_factor_index = start_index
+        else:
+            start_factor_index = 0
+        # 清空模型参数
+        self.X_choose_step = []
+        self.X_check_days = []
+        self.X_choose_method = []
+        self.looking_forward_days = 0
+        self.score = 0.
+        self.std = 0.
         self.X_chosen = np.transpose([ProcessingMethod.scale(self.__X[:, start_factor_index])])
         self.y_chosen = self.__y.ravel()
         self.X_choose_step.append(start_factor_index)
         self.X_check_days.append(0)
         self.X_choose_method.append(ProcessingMethod.scale.__name__)
-        print "随机开始因子下标：", start_factor_index
+        print "随机开始因子下标：".decode('utf8').encode('gbk'), start_factor_index
         for col in range(0, self.__X.shape[1]):     # 遍历每个因子
             if col == start_factor_index:
                 continue
             # 判断下一个因子的有效性
-            print "\n开始判断下一个因子的有效性，当前判断下标为", col, "的因子"
+            print "\n开始判断下一个因子的有效性，当前判断下标为".decode('utf8').encode('gbk'), col, "的因子".decode('utf8').encode('gbk')
             t_factor = np.transpose([self.__X[:, col]])
-            print "传入X_chosen.shape=", self.X_chosen.shape, "y_chosen.shape=", self.y_chosen.shape, "因子.shape=", t_factor.shape
+            print "传入X_chosen.shape=".decode('utf8').encode('gbk'), self.X_chosen.shape, "y_chosen.shape=",\
+                self.y_chosen.shape, "因子.shape=".decode('utf8').encode('gbk'), t_factor.shape
             result = self.test_factor(self.X_chosen, self.y_chosen, t_factor)
             if result['method'] is not None:        # 因子有效
                 self.X_choose_step.append(col)
@@ -84,7 +99,6 @@ class FactorFilter:
         self.X_choose_step = np.array(self.X_choose_step)
         self.X_check_days = np.array(self.X_check_days)
         self.X_choose_method = np.array(self.X_choose_method)
-        # 保存训练后的模型，以进行模型可视化
 
     def test_factor(self, x, y, factor, update=True):
         """
@@ -97,9 +111,9 @@ class FactorFilter:
         :return: 字典类型的最佳结果
         """
         # 计算原模型的准确度列表
-        print "当前输入集的格式为", self.X_chosen.shape
+        print "当前输入集的格式为".decode('utf8').encode('gbk'), self.X_chosen.shape
         accu_before = self.validate(self.X_chosen, self.y_chosen)
-        print "原模型均值与标准差", accu_before.mean(), accu_before.std()
+        print "原模型均值与标准差".decode('utf8').encode('gbk'), accu_before.mean(), accu_before.std()
 
         best_result = {'method':None, 'days':0, 'accuracy_list':None}       # 如果接受，保存最好结果
         record_result = {'method':None, 'days':0, 'accuracy':0.}            # 保存本次训练中的最好结果（无论是否接受）
@@ -108,7 +122,7 @@ class FactorFilter:
         factor = factor[self.looking_forward_days:, ]
         # 开始遍历寻找最优参数
         for days in range(0, self.__max_check_days+1):
-            for method in [ProcessingMethod.scale, ProcessingMethod.centralization, ProcessingMethod.range_standard,
+            for method in [ProcessingMethod.scale, ProcessingMethod.centralization,
                            ProcessingMethod.discretization]:
                 # 因子处理：前查+变换
                 t_factor = ProcessingMethod.get_delta(factor=factor, days=days)
@@ -126,7 +140,8 @@ class FactorFilter:
                 accu_after = self.validate(tx, ty)
                 tam = accu_after.mean()
                 # 判断结果提升是否显著
-                print "前查", days, "天", "最好均值", temp_best_accuracy, "当前均值", tam
+                print "前查".decode('utf8').encode('gbk'), days, "天".decode('utf8').encode('gbk'),\
+                    "最好均值".decode('utf8').encode('gbk'), temp_best_accuracy, "当前均值".decode('utf8').encode('gbk'), tam
                 if tam > record_result['accuracy']:
                     record_result['method'] = method.__name__
                     record_result['days'] = days
@@ -134,7 +149,8 @@ class FactorFilter:
                 if accu_after.mean() > accu_before.mean()+self.__accept_ratio*accu_before.std():    # 通过了接受阈值
                     # 比当前最好结果更好（最好结果可能已经在该因子的之前循环中更新）
                     if accu_after.mean() > temp_best_accuracy:
-                        print "结果提升显著，将", temp_best_accuracy, "更新到", accu_after.mean()
+                        print "结果提升显著，将".decode('utf8').encode('gbk'), temp_best_accuracy,\
+                            "更新到".decode('utf8').encode('gbk'), accu_after.mean()
                         best_result['accuracy_list'] = accu_after
                         best_result['method'] = method.__name__
                         best_result['days'] = days
@@ -155,7 +171,12 @@ class FactorFilter:
     def validate(self, x, y, bias=0):
         accuracy_list = []
         for rd in range(0, self.__validate_times):
+            """
             x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=self.__test_size, random_state=rd+bias)
+            """
+            random.seed()
+            rs = int(random.random()*1000)
+            x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=self.__test_size, random_state=rs)
             self.__model.fit(x_train, y_train)
             # 选择精度计算的方式
             if self.__method == 'accuracy':         # 普通的分类精确度
@@ -174,6 +195,13 @@ class FactorFilter:
                 accuracy_list.append(0)
                 for i in range(0, len(tp)):
                     accuracy_list[rd] += (tp[i]-tw[i])*tw[i]
+            elif self.__method == 'rss':            # 残差平方和，用于检验回归模型的精确度
+                y_predict = self.__model.predict(x_test)
+                rss = 0.
+                for i in range(0, len(y_test)):
+                    rss += abs(y_predict[i]-y_test[i])
+                rss /= len(y_test)
+                accuracy_list.append(rss)
         accuracy_list = np.array(accuracy_list)
         return accuracy_list
 

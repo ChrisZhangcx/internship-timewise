@@ -2,7 +2,7 @@
 import MySQLdb
 
 
-def connect(host='192.168.18.63', port=3306, user='root', passwd='123321', db='goal'):
+def connect(host='localhost', port=3306, user='root', passwd='', db='goal'):
     global cur, conn
     conn = MySQLdb.connect(
         host=host,

@@ -9,6 +9,7 @@ import pickle
 from db import connect, disconnect
 import numpy as np
 import csv
+from config import title, order
 
 
 dname = ['日期', '开盘价', '最高价', '最低价', '收盘价', '成交量', '成交额', '涨跌幅', '振幅', '均价', '总市值',      # 0-10
@@ -25,16 +26,13 @@ def get_data():
     :return:
     """
     global ddict
-    input_address = open('/Users/chriszhang/PycharmProjects/实习/涨跌幅预测/data_factor.txt', 'rb')
+    input_address = open('data_factor.txt', 'r')
     ddict = pickle.load(input_address)
-
-
-def generate_select_order(attributes, table, condition=None):
-    return "select "+attributes+" from "+table+" "+condition
 
 
 # 连接数据库
 cur = connect()
+
 
 # 获取数据
 get_data()
@@ -50,12 +48,6 @@ all_X = np.transpose(all_X)
 all_y = np.transpose([np.array(all_y)])
 
 # 初始化因子集
-#title = ['con_date', 'c1', 'c3', 'c4', 'c5', 'c6', 'c7', 'c12', 'cb', 'cpb']
-title = ['con_date', 'c13', 'c9']
-#title = ['con_date', 'cgb', 'cgpb', 'cgg', 'cgpeg']
-#order = generate_select_order("con_date, c1, c3, c4, c5, c6, c7, c12, cb, cpb", "con_forecast_idx", "where stock_code='000300' and rpt_date='2013'")
-order = generate_select_order("con_date, c13, c9", "con_forecast_c2_idx", "where stock_code='000300'")
-#order = generate_select_order("con_date, cgb, cgpb, cgg, cgpeg", "con_forecast_c3_idx", "where stock_code='000300'")
 cur.execute(order)
 data = cur.fetchall()
 data = np.array(data)
@@ -80,7 +72,6 @@ x = np.array(x)
 y = np.array(y)
 factors = np.array(factors)
 order_date = np.transpose([order_date])
-
 
 # 保存数据以便读取
 input_file = open('mysql_factors', 'wb')
